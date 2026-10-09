@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+logs/
+*.log
+.env
+.env.*
+*.mdf
+*.ldf
+Thumbs.db
+.DS_Store

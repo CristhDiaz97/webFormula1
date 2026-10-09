@@ -1,0 +1,22 @@
+@inherits LayoutComponentBase
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container">
+        <NavLink class="navbar-brand fw-bold" href="" Match="NavLinkMatch.All">F1 Colombia</NavLink>
+        <ul class="navbar-nav flex-row gap-3">
+            <li class="nav-item"><NavLink class="nav-link" href="" Match="NavLinkMatch.All">Inicio</NavLink></li>
+            <li class="nav-item"><NavLink class="nav-link" href="races">Carreras</NavLink></li>
+            <li class="nav-item"><NavLink class="nav-link" href="standings">Clasificación</NavLink></li>
+            <li class="nav-item"><NavLink class="nav-link" href="drivers">Pilotos</NavLink></li>
+            <li class="nav-item"><NavLink class="nav-link" href="teams">Escuderías</NavLink></li>
+        </ul>
+    </div>
+</nav>
+
+<main class="container py-4">
+    @Body
+</main>
+
+<footer class="text-center text-muted small py-3">
+    Datos de Jolpica F1 &middot; Horarios en hora de Colombia (UTC-5)
+</footer>

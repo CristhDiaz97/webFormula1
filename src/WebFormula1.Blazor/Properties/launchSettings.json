@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "WebFormula1.Blazor": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:55744;http://localhost:55745"
+    }
+  }
+}

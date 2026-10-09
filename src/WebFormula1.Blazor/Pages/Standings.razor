@@ -1,0 +1,95 @@
+@page "/standings"
+@inject FormulaService Api
+
+<PageTitle>Clasificación</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Campeonato</h1>
+    <SeasonPicker Seasons="seasons" Value="year" ValueChanged="OnYearChanged" />
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><button class="nav-link @(showDrivers ? "active" : "")" @onclick="ShowDrivers">Pilotos</button></li>
+    <li class="nav-item"><button class="nav-link @(showDrivers ? "" : "active")" @onclick="ShowConstructors">Constructores</button></li>
+</ul>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-danger"></div></div>
+}
+else if (showDrivers)
+{
+    <table class="table table-striped">
+        <thead class="table-dark"><tr><th>Pos</th><th>Piloto</th><th>Equipo</th><th>Victorias</th><th>Puntos</th></tr></thead>
+        <tbody>
+        @foreach (var d in drivers)
+        {
+            <tr><td>@d.Position</td><td>@d.Driver <small class="text-muted">@d.Code</small></td><td>@d.Team</td><td>@d.Wins</td><td><strong>@d.Points</strong></td></tr>
+        }
+        </tbody>
+    </table>
+}
+else
+{
+    <table class="table table-striped">
+        <thead class="table-dark"><tr><th>Pos</th><th>Escudería</th><th>Victorias</th><th>Puntos</th></tr></thead>
+        <tbody>
+        @foreach (var t in constructors)
+        {
+            <tr><td>@t.Position</td><td>@t.Team</td><td>@t.Wins</td><td><strong>@t.Points</strong></td></tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<int> seasons = new();
+    private List<DriverStandingDto> drivers = new();
+    private List<ConstructorStandingDto> constructors = new();
+    private int year;
+    private bool showDrivers = true;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            seasons = await Api.GetSeasonsAsync();
+            if (seasons.Count > 0)
+            {
+                year = seasons[0];
+                await Load();
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"No se pudo conectar con la API: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OnYearChanged(int value)
+    {
+        year = value;
+        loading = true;
+        await Load();
+        loading = false;
+    }
+
+    private async Task Load()
+    {
+        drivers = await Api.GetDriverStandingsAsync(year);
+        constructors = await Api.GetConstructorStandingsAsync(year);
+    }
+
+    private void ShowDrivers() => showDrivers = true;
+    private void ShowConstructors() => showDrivers = false;
+}

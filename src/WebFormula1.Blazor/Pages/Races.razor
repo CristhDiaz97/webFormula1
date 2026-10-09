@@ -1,0 +1,141 @@
+@page "/races"
+@inject FormulaService Api
+
+<PageTitle>Carreras</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Calendario y resultados</h1>
+    <SeasonPicker Seasons="seasons" Value="year" ValueChanged="OnYearChanged" />
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-danger"></div></div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr><th>#</th><th>Gran Premio</th><th>Circuito</th><th>Carrera (Colombia)</th><th>Ganador</th><th></th></tr>
+            </thead>
+            <tbody>
+            @foreach (var r in races)
+            {
+                <tr>
+                    <td>@r.Round</td>
+                    <td>@r.Name</td>
+                    <td>@r.Circuit <small class="text-muted">@r.Country</small></td>
+                    <td>@ColombiaTime.Format(r.Sessions.Last().StartColombia)</td>
+                    <td>@(r.Winner ?? "-")</td>
+                    <td><button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(r.Round)">@(openRound == r.Round ? "Cerrar" : "Detalle")</button></td>
+                </tr>
+                @if (openRound == r.Round)
+                {
+                    <tr>
+                        <td colspan="6" class="bg-light">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>Horarios (hora de Colombia)</h6>
+                                    <ul class="list-unstyled">
+                                        @foreach (var s in r.Sessions)
+                                        {
+                                            <li><strong>@s.Name:</strong> @ColombiaTime.Format(s.StartColombia)</li>
+                                        }
+                                    </ul>
+                                </div>
+                                <div class="col-md-8">
+                                    @if (detail is null)
+                                    {
+                                        <div class="spinner-border spinner-border-sm"></div>
+                                    }
+                                    else if (detail.Results.Count == 0)
+                                    {
+                                        <p class="text-muted">Sin resultados todavía.</p>
+                                    }
+                                    else
+                                    {
+                                        <table class="table table-sm mb-0">
+                                            <thead><tr><th>Pos</th><th>Piloto</th><th>Equipo</th><th>Parrilla</th><th>Tiempo / Estado</th><th>Pts</th></tr></thead>
+                                            <tbody>
+                                            @foreach (var x in detail.Results)
+                                            {
+                                                <tr>
+                                                    <td>@x.PositionText</td>
+                                                    <td>@x.Driver @(x.FastestLap ? "(vuelta rápida)" : "")</td>
+                                                    <td>@x.Team</td>
+                                                    <td>@x.Grid</td>
+                                                    <td>@(x.Time ?? x.Status)</td>
+                                                    <td>@x.Points</td>
+                                                </tr>
+                                            }
+                                            </tbody>
+                                        </table>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<int> seasons = new();
+    private List<RaceDto> races = new();
+    private RaceDetailDto? detail;
+    private int year;
+    private int? openRound;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            seasons = await Api.GetSeasonsAsync();
+            if (seasons.Count > 0)
+            {
+                year = seasons[0];
+                races = await Api.GetRacesAsync(year);
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"No se pudo conectar con la API: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OnYearChanged(int value)
+    {
+        year = value;
+        openRound = null;
+        loading = true;
+        races = await Api.GetRacesAsync(year);
+        loading = false;
+    }
+
+    private async Task Toggle(int round)
+    {
+        if (openRound == round)
+        {
+            openRound = null;
+            return;
+        }
+
+        openRound = round;
+        detail = null;
+        detail = await Api.GetRaceDetailAsync(year, round);
+    }
+}

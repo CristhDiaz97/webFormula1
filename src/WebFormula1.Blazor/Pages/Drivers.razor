@@ -1,0 +1,93 @@
+@page "/drivers"
+@inject FormulaService Api
+
+<PageTitle>Pilotos</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Estadísticas de pilotos</h1>
+    <SeasonPicker Seasons="seasons" Value="year" ValueChanged="OnYearChanged" />
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-danger"></div></div>
+}
+else if (stats.Count == 0)
+{
+    <div class="alert alert-info">Sin resultados disponibles para esta temporada.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Piloto</th><th>Equipo</th><th>Carreras</th><th>Victorias</th><th>Podios</th>
+                    <th>Poles</th><th>V. rápidas</th><th>Abandonos</th><th>Mejor</th><th>Puntos</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var s in stats)
+            {
+                <tr>
+                    <td>@s.Name <small class="text-muted">@s.Code</small></td>
+                    <td>@s.Team</td>
+                    <td>@s.Races</td>
+                    <td>@s.Wins</td>
+                    <td>@s.Podiums</td>
+                    <td>@s.Poles</td>
+                    <td>@s.FastestLaps</td>
+                    <td>@s.Dnfs</td>
+                    <td>P@(s.BestFinish)</td>
+                    <td><strong>@s.Points</strong></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <p class="small text-muted">
+        Poles = salidas desde la primera posición de la parrilla. Los puntos son solo de carreras dominicales
+        (sin sprint), por eso pueden diferir de la tabla oficial en la sección Clasificación.
+    </p>
+}
+
+@code {
+    private List<int> seasons = new();
+    private List<DriverStatsDto> stats = new();
+    private int year;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            seasons = await Api.GetSeasonsAsync();
+            if (seasons.Count > 0)
+            {
+                year = seasons[0];
+                stats = await Api.GetDriverStatsAsync(year);
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"No se pudo conectar con la API: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OnYearChanged(int value)
+    {
+        year = value;
+        loading = true;
+        stats = await Api.GetDriverStatsAsync(year);
+        loading = false;
+    }
+}

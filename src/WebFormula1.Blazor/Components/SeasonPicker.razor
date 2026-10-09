@@ -1,0 +1,15 @@
+<select class="form-select form-select-sm w-auto" value="@Value" @onchange="OnChange">
+    @foreach (var season in Seasons)
+    {
+        <option value="@season">@season</option>
+    }
+</select>
+
+@code {
+    [Parameter] public List<int> Seasons { get; set; } = new();
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+
+    private Task OnChange(ChangeEventArgs e) =>
+        int.TryParse(e.Value?.ToString(), out var year) ? ValueChanged.InvokeAsync(year) : Task.CompletedTask;
+}

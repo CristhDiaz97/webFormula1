@@ -1,0 +1,124 @@
+@page "/"
+@inject FormulaService Api
+
+<PageTitle>Fórmula 1</PageTitle>
+
+<h1 class="mb-4">Fórmula 1</h1>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@foreach (var n in notifications)
+{
+    <div class="alert alert-warning">
+        <strong>Aviso: @n.Race</strong>
+        <div class="mt-2" style="white-space: pre-line">@n.Message</div>
+    </div>
+}
+
+@if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-danger"></div></div>
+}
+else if (next is not null)
+{
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">Próxima carrera</div>
+        <div class="card-body">
+            <h4>Ronda @next.Round &middot; @next.Name</h4>
+            <p class="text-muted">@next.Circuit &mdash; @next.Locality, @next.Country</p>
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Sesión</th><th>Hora Colombia</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var s in next.Sessions)
+                {
+                    <tr class="@(s == upcoming ? "table-warning" : "")">
+                        <td>@s.Name</td>
+                        <td>@ColombiaTime.Format(s.StartColombia)</td>
+                        <td class="text-muted">@Countdown(s.StartColombia)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else if (error is null)
+{
+    <div class="alert alert-info">Todavía no hay datos. La API los está descargando de Jolpica; recarga en unos segundos.</div>
+}
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Pilotos (top 5)</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var d in drivers.Take(5))
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@d.Position. @d.Driver <small class="text-muted">@d.Team</small></span>
+                        <strong>@d.Points</strong>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Constructores (top 5)</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var t in teams.Take(5))
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@t.Position. @t.Team</span>
+                        <strong>@t.Points</strong>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RaceDto? next;
+    private SessionDto? upcoming;
+    private List<NotificationDto> notifications = new();
+    private List<DriverStandingDto> drivers = new();
+    private List<ConstructorStandingDto> teams = new();
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            next = await Api.GetNextRaceAsync();
+            upcoming = next?.Sessions.FirstOrDefault(s => s.StartColombia > DateTimeOffset.UtcNow);
+            notifications = await Api.GetActiveNotificationsAsync();
+
+            var seasons = await Api.GetSeasonsAsync();
+            if (seasons.Count > 0)
+            {
+                drivers = await Api.GetDriverStandingsAsync(seasons[0]);
+                teams = await Api.GetConstructorStandingsAsync(seasons[0]);
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"No se pudo conectar con la API (¿está corriendo en https://localhost:7001?): {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private static string Countdown(DateTimeOffset start)
+    {
+        var left = start - DateTimeOffset.UtcNow;
+        if (left <= TimeSpan.Zero) return "ya pasó";
+        return left.TotalDays >= 1 ? $"en {(int)left.TotalDays} d {left.Hours} h" : $"en {left.Hours} h {left.Minutes} min";
+    }
+}

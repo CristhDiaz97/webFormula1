@@ -1,0 +1,76 @@
+@page "/teams"
+@inject FormulaService Api
+
+<PageTitle>Escuderías</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Escuderías</h1>
+    <SeasonPicker Seasons="seasons" Value="year" ValueChanged="OnYearChanged" />
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-danger"></div></div>
+}
+else
+{
+    <div class="row">
+        @foreach (var t in teams)
+        {
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@t.Name <small class="text-muted">@t.Nationality</small></h5>
+                        <p class="mb-2"><strong>Pilotos:</strong> @(t.Drivers.Count > 0 ? string.Join(", ", t.Drivers) : "-")</p>
+                        <p class="card-text small">@(t.History ?? "Historia no disponible.")</p>
+                        @if (t.Url is not null)
+                        {
+                            <a href="@t.Url" target="_blank" rel="noopener" class="small">Ver más en Wikipedia</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<int> seasons = new();
+    private List<TeamDto> teams = new();
+    private int year;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            seasons = await Api.GetSeasonsAsync();
+            if (seasons.Count > 0)
+            {
+                year = seasons[0];
+                teams = await Api.GetTeamsAsync(year);
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"No se pudo conectar con la API: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OnYearChanged(int value)
+    {
+        year = value;
+        loading = true;
+        teams = await Api.GetTeamsAsync(year);
+        loading = false;
+    }
+}
