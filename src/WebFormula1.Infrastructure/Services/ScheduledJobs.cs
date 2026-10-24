@@ -4,6 +4,7 @@ namespace WebFormula1.Infrastructure.Services;
 public interface IScheduledJobs
 {
     Task SyncCurrentSeasonAsync();
+    Task ScheduleNotificationsAsync();
     Task SendNotificationsAsync();
 }
 
@@ -24,9 +25,7 @@ public class ScheduledJobs : IScheduledJobs
         await _notifications.ScheduleAsync(CancellationToken.None);
     }
 
-    public async Task SendNotificationsAsync()
-    {
-        await _notifications.ScheduleAsync(CancellationToken.None);
-        await _notifications.SendPendingAsync(CancellationToken.None);
-    }
+    public Task ScheduleNotificationsAsync() => _notifications.ScheduleAsync(CancellationToken.None);
+
+    public Task SendNotificationsAsync() => _notifications.SendPendingAsync(CancellationToken.None);
 }

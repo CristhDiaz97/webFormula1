@@ -258,6 +258,42 @@ namespace WebFormula1.Infrastructure.Migrations
                     b.ToTable("RaceNotifications");
                 });
 
+            modelBuilder.Entity("WebFormula1.Core.Models.SessionReminder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("NotifyAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RaceId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Sent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SessionName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RaceId", "SessionName")
+                        .IsUnique();
+
+                    b.ToTable("SessionReminders");
+                });
+
             modelBuilder.Entity("WebFormula1.Core.Models.Team", b =>
                 {
                     b.Property<int>("Id")
@@ -377,6 +413,17 @@ namespace WebFormula1.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("WebFormula1.Core.Models.RaceNotification", b =>
+                {
+                    b.HasOne("WebFormula1.Core.Models.Race", "Race")
+                        .WithMany()
+                        .HasForeignKey("RaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Race");
+                });
+
+            modelBuilder.Entity("WebFormula1.Core.Models.SessionReminder", b =>
                 {
                     b.HasOne("WebFormula1.Core.Models.Race", "Race")
                         .WithMany()

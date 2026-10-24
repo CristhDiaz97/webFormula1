@@ -14,6 +14,7 @@ public class Formula1DbContext : DbContext
     public DbSet<DriverStanding> DriverStandings => Set<DriverStanding>();
     public DbSet<TeamStanding> TeamStandings => Set<TeamStanding>();
     public DbSet<RaceNotification> RaceNotifications => Set<RaceNotification>();
+    public DbSet<SessionReminder> SessionReminders => Set<SessionReminder>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -54,6 +55,13 @@ public class Formula1DbContext : DbContext
         {
             e.HasIndex(s => new { s.SeasonYear, s.TeamId }).IsUnique();
             e.HasOne(s => s.Team).WithMany(t => t.Standings).HasForeignKey(s => s.TeamId);
+        });
+
+        b.Entity<SessionReminder>(e =>
+        {
+            e.HasIndex(r => new { r.RaceId, r.SessionName }).IsUnique();
+            e.Property(r => r.SessionName).HasMaxLength(60);
+            e.HasOne(r => r.Race).WithMany().HasForeignKey(r => r.RaceId);
         });
 
         b.Entity<RaceNotification>(e =>

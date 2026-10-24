@@ -114,6 +114,18 @@ public class TeamStanding
     public int Wins { get; set; }
 }
 
+public class SessionReminder
+{
+    public int Id { get; set; }
+    public int RaceId { get; set; }
+    public Race Race { get; set; } = null!;
+    public string SessionName { get; set; } = string.Empty;
+    public DateTime StartUtc { get; set; }
+    public DateTime NotifyAtUtc { get; set; }
+    public bool Sent { get; set; }
+    public DateTime? SentAtUtc { get; set; }
+}
+
 public class RaceNotification
 {
     public int Id { get; set; }

@@ -15,6 +15,9 @@ public class NotificationsController : ControllerBase
     [HttpGet("active")]
     public Task<List<NotificationDto>> Active(CancellationToken ct) => _notifications.GetActiveAsync(ct);
 
+    [HttpPost("test")]
+    public Task<List<ProviderTestResult>> Test(CancellationToken ct) => _notifications.SendTestAsync(ct);
+
     [HttpPost("schedule")]
     public async Task<IActionResult> Schedule(CancellationToken ct) =>
         Ok(new { changed = await _notifications.ScheduleAsync(ct) });

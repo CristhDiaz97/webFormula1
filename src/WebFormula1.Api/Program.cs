@@ -48,10 +48,13 @@ using (var scope = app.Services.CreateScope())
 }
 
 RecurringJob.AddOrUpdate<IScheduledJobs>("sync-current-season", j => j.SyncCurrentSeasonAsync(), "0 */3 * * *");
-RecurringJob.AddOrUpdate<IScheduledJobs>("send-notifications", j => j.SendNotificationsAsync(), "*/15 * * * *");
+RecurringJob.AddOrUpdate<IScheduledJobs>("schedule-notifications", j => j.ScheduleNotificationsAsync(), "*/30 * * * *");
+RecurringJob.AddOrUpdate<IScheduledJobs>("send-notifications", j => j.SendNotificationsAsync(), "* * * * *");
 
 if (needsInitialSync)
     BackgroundJob.Enqueue<IScheduledJobs>(j => j.SyncCurrentSeasonAsync());
+else
+    BackgroundJob.Enqueue<IScheduledJobs>(j => j.ScheduleNotificationsAsync());
 
 try
 {

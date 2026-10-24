@@ -27,7 +27,15 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IFormula1SyncService, Formula1SyncService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.Configure<TelegramOptions>(configuration.GetSection("Telegram"));
+        services.Configure<NotificationOptions>(configuration.GetSection("Notifications"));
         services.AddScoped<INotificationProvider, ConsoleNotificationProvider>();
+        services.AddHttpClient<TelegramNotificationProvider>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.telegram.org/");
+            client.Timeout = TimeSpan.FromSeconds(20);
+        });
+        services.AddTransient<INotificationProvider>(sp => sp.GetRequiredService<TelegramNotificationProvider>());
         services.AddScoped<IScheduledJobs, ScheduledJobs>();
 
         return services;
