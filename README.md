@@ -1,278 +1,138 @@
-# 🏎️ Web Fórmula 1 - Aplicación C#
+# Web Fórmula 1
 
-Una aplicación completa de Fórmula 1 en C# que se integra con la API Jolpica F1, proporciona notificaciones automáticas y estadísticas detalladas de carreras y pilotos.
+Aplicación en C# que muestra el calendario, los resultados, las clasificaciones y las estadísticas de la Fórmula 1, con todos los horarios en **hora de Colombia (UTC-5)**, y que avisa por **Telegram** cuando está por empezar cada sesión.
 
-## 📋 Características
+Los datos salen de la API pública [Jolpica F1](https://api.jolpi.ca/) (formato Ergast) y la historia de cada escudería, de Wikipedia.
 
-- ✅ Integración con API Jolpica F1
-- ✅ Notificaciones automáticas 24 horas antes de eventos (Libres 1, 2, 3, Clasificación, Carrera)
-- ✅ Horarios adaptados a zona horaria de Colombia (UTC-5)
-- ✅ Estadísticas de carreras y pilotos
-- ✅ Historia de escuderías
-- ✅ Tabla de clasificación de pilotos
-- ✅ Tabla de clasificación de constructores
-- ✅ API RESTful
-- ✅ Interfaz web con Blazor
-- ✅ Trabajos programados con Hangfire
-- ✅ Base de datos SQL Server
+## Qué hace
 
-## 🏗️ Arquitectura
+- **Calendario con horarios en Colombia:** Libres 1, 2 y 3, clasificación, sprint y carrera de cada Gran Premio.
+- **Resultados por carrera:** posición, parrilla, tiempo o estado, puntos y vuelta rápida.
+- **Clasificación:** tabla de pilotos y de constructores por temporada.
+- **Estadísticas de pilotos:** carreras, victorias, podios, poles, vueltas rápidas, abandonos y mejor resultado.
+- **Escuderías:** pilotos actuales e historia del equipo.
+- **Notificaciones por Telegram:**
+  - Un resumen con todos los horarios del fin de semana, 24 horas antes de la primera sesión.
+  - Un recordatorio unos minutos antes de cada sesión (15 por defecto).
+- **Sincronización automática** con Jolpica cada 3 horas.
 
-### Proyectos
+## Arquitectura
 
-1. **WebFormula1.Core** - Modelos de dominio y interfaces
-2. **WebFormula1.Infrastructure** - Acceso a datos, integración con API, servicios
-3. **WebFormula1.Api** - API ASP.NET Core
-4. **WebFormula1.Blazor** - Interfaz web Blazor WebAssembly
-
-### Base de Datos
-
-Entidades principales:
-- `Driver` - Pilotos
-- `Team` - Escuderías
-- `Race` - Carreras
-- `DriverResult` - Resultados de pilotos en carreras
-- `DriverStanding` - Clasificación de pilotos
-- `TeamStanding` - Clasificación de constructores
-- `RaceNotification` - Notificaciones programadas
-
-## 🚀 Instalación y Configuración
-
-### Requisitos Previos
-
-- .NET 8.0 SDK
-- SQL Server (LocalDB o versión completa)
-- Visual Studio 2022 o Visual Studio Code
-
-### Pasos de Instalación
-
-1. **Clonar el repositorio**
-```bash
-cd C:\Dev\ProyectosIA\webFormula1
+```
+src/
+  WebFormula1.Core            Entidades, DTOs compartidos y conversión a hora de Colombia
+  WebFormula1.Infrastructure  EF Core (SQL Server), clientes de Jolpica y Wikipedia,
+                              sincronización, notificaciones y trabajos programados
+  WebFormula1.Api             API REST (ASP.NET Core), Swagger y Hangfire
+  WebFormula1.Blazor          Interfaz web (Blazor WebAssembly)
 ```
 
-2. **Restaurar paquetes NuGet**
-```bash
-dotnet restore
+- **Base de datos:** SQL Server con Entity Framework Core. Las migraciones se aplican solas al arrancar la API.
+- **Trabajos programados (Hangfire):**
+
+  | Trabajo | Frecuencia | Qué hace |
+  |---|---|---|
+  | `sync-current-season` | cada 3 horas | Descarga calendario, pilotos, equipos, clasificaciones y resultados |
+  | `schedule-notifications` | cada 30 min | Crea o actualiza los avisos según los horarios actuales |
+  | `send-notifications` | cada minuto | Envía los avisos cuya hora ya llegó |
+
+- Si la base está vacía, la API descarga sola la temporada actual al arrancar.
+
+## Requisitos
+
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- SQL Server (Express o LocalDB)
+- Certificado de desarrollo de HTTPS de .NET: `dotnet dev-certs https --trust`
+
+## Configuración
+
+### Base de datos
+
+La cadena de conexión está en `src/WebFormula1.Api/appsettings.json` y apunta a `CRISTHIAN\SQLEXPRESS`, el equipo de desarrollo original. **Cámbiala por tu servidor**, por ejemplo:
+
+```
+Server=(localdb)\\mssqllocaldb;Database=Formula1DB;Trusted_Connection=true;TrustServerCertificate=true;
 ```
 
-3. **Configurar la base de datos**
+Para no modificar el archivo versionado, puedes guardarla en los secretos de usuario:
 
-Editar `src/WebFormula1.Api/appsettings.json` y configurar la conexión:
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=Formula1DB;Trusted_Connection=true;"
-}
-```
-
-4. **Ejecutar migraciones de base de datos**
 ```bash
 cd src/WebFormula1.Api
-dotnet ef database update
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "TU_CADENA"
 ```
 
-5. **Configurar la URL de la API Jolpica F1**
+### Telegram
 
-Asegurarse de que en `appsettings.json`:
+1. En Telegram, habla con **@BotFather**, envía `/newbot` y guarda el token que te entrega.
+2. Escríbele cualquier mensaje a tu bot nuevo (por ejemplo `/start`).
+3. Obtén tu `ChatId` abriendo `https://api.telegram.org/bot<TU_TOKEN>/getUpdates` y copiando el valor de `"chat":{"id":...}`.
+4. Guarda ambos datos como secretos de usuario. **Nunca los escribas en `appsettings.json` ni los subas al repositorio**:
+
+```bash
+cd src/WebFormula1.Api
+dotnet user-secrets set "Telegram:BotToken" "TU_TOKEN"
+dotnet user-secrets set "Telegram:ChatId" "TU_CHAT_ID"
+```
+
+5. Con la API en marcha, envía un mensaje de prueba: `POST https://localhost:7001/api/notifications/test`.
+
+Si Telegram no está configurado, los avisos solo aparecen en el log de la API y como banner en la página de inicio.
+
+Para cambiar con cuántos minutos de anticipación se avisa de cada sesión, ajusta en `appsettings.json`:
+
 ```json
-"JolpicaF1": {
-  "BaseUrl": "https://api.jolpica.com"
-}
+"Notifications": { "SessionLeadMinutes": 15 }
 ```
 
-## 🏃 Ejecución
+## Cómo ejecutarla
 
-### Ejecutar la API
+Se necesitan dos terminales. Arranca primero la API.
 
 ```bash
 cd src/WebFormula1.Api
 dotnet run
 ```
 
-La API estará disponible en: `https://localhost:7001`
-
-El Dashboard de Hangfire estará en: `https://localhost:7001/hangfire`
-
-### Ejecutar Blazor (después de la API)
-
 ```bash
 cd src/WebFormula1.Blazor
-dotnet watch run
+dotnet run
 ```
 
-La aplicación web estará disponible en: `https://localhost:5001`
+| Servicio | URL |
+|---|---|
+| Web | https://localhost:55744 |
+| API | https://localhost:7001 |
+| Swagger | https://localhost:7001/swagger |
+| Hangfire | https://localhost:7001/hangfire |
 
-## 📡 API Endpoints
+La web llama a la API en `https://localhost:7001/` (definido en `src/WebFormula1.Blazor/Program.cs`).
 
-### Carreras
-- `GET /api/races/{year}` - Obtener carreras de una temporada
-- `GET /api/races/{year}/{round}` - Obtener detalles de una carrera
-- `GET /api/races/upcoming` - Obtener próximas carreras
+**Los avisos solo se envían mientras la API esté en ejecución.**
 
-### Pilotos
-- `GET /api/drivers/{year}` - Obtener pilotos de una temporada
-- `GET /api/drivers/standings/{year}` - Obtener clasificación de pilotos
-- `GET /api/drivers/{id}/details` - Obtener detalles de un piloto
+## Endpoints principales
 
-### Escuderías
-- `GET /api/teams` - Obtener todas las escuderías
-- `GET /api/teams/standings/{year}` - Obtener clasificación de constructores
-- `GET /api/teams/{id}/details` - Obtener detalles de una escudería
-- `GET /api/teams/{id}/history` - Obtener historia de una escudería
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/races/seasons` | Temporadas disponibles |
+| GET | `/api/races/next` | Próxima carrera con sus sesiones |
+| GET | `/api/races/{year}` | Calendario de una temporada |
+| GET | `/api/races/{year}/{round}` | Detalle y resultados de una carrera |
+| GET | `/api/standings/drivers/{year}` | Clasificación de pilotos |
+| GET | `/api/standings/constructors/{year}` | Clasificación de constructores |
+| GET | `/api/drivers/{year}/stats` | Estadísticas de pilotos |
+| GET | `/api/teams/{year}` | Escuderías con pilotos e historia |
+| GET | `/api/notifications/active` | Avisos vigentes del fin de semana |
+| POST | `/api/notifications/test` | Envía un mensaje de prueba |
+| POST | `/api/sync/season/{year}` | Fuerza la sincronización de una temporada |
+| GET | `/api/apistatus/health` | Comprueba la conexión con Jolpica |
 
-## 🔔 Sistema de Notificaciones
+## Limitaciones conocidas
 
-### Características
+- Los puntos de la tabla de estadísticas de pilotos solo suman carreras dominicales (sin sprint), así que pueden diferir de la clasificación oficial.
+- «Poles» se calcula como salidas desde la primera posición de la parrilla.
+- La historia de las escuderías viene de Wikipedia y está en inglés.
+- Jolpica limita las peticiones; la sincronización hace pocas llamadas, pero no la fuerces en bucle.
 
-- Notificaciones automáticas 24 horas antes de cada evento
-- Eventos: Libres 1, Libres 2, Libres 3, Clasificación, Carrera
-- Horarios en zona horaria de Colombia (COT)
-- Trabajos programados con Hangfire
+## Créditos
 
-### Configuración
-
-Los trabajos se configuran automáticamente en `Program.cs`:
-
-- **Sincronización de datos**: Diariamente a las 2:00 AM
-- **Envío de notificaciones**: Cada hora
-
-## 🗄️ Base de Datos
-
-### Diagrama de Relaciones
-
-```
-Driver
-  ├── Team (FK)
-  ├── DriverResult (1:N)
-  └── DriverStanding (1:N)
-
-Team
-  ├── Drivers (1:N)
-  └── TeamStanding (1:N)
-
-Race
-  └── DriverResult (1:N)
-
-DriverResult
-  ├── Driver (FK)
-  └── Race (FK)
-
-DriverStanding
-  └── Driver (FK)
-
-TeamStanding
-  └── Team (FK)
-
-RaceNotification
-  └── Race (FK)
-```
-
-## 📊 Estadísticas Disponibles
-
-### Estadísticas de Pilotos
-- Campeonatos mundiales
-- Carreras disputadas
-- Puntos totales
-- Victorias
-- Podios
-- Pole positions
-- Vueltas rápidas
-
-### Estadísticas de Escuderías
-- Campeonatos constructores
-- Mejor clasificación en carrera
-- Pole positions
-- Vueltas rápidas
-- Historia y fundación
-
-### Resultados de Carreras
-- Posiciones finales
-- Posición en parrilla
-- Puntos obtenidos
-- Vueltas completadas
-- Tiempo total
-- Estado final (Terminado, DNF, etc.)
-- Vuelta rápida
-
-## 🔐 Seguridad
-
-- Validación de entrada de datos
-- Manejo de excepciones centralizado
-- Logging estructurado con Serilog
-- Conexión HTTPS
-
-## 📝 Logging
-
-Los logs se almacenan en:
-- Consola (durante desarrollo)
-- Archivos: `logs/formula1-*.txt` (rotación diaria)
-
-Niveles de log: Debug, Information, Warning, Error
-
-## 🛠️ Tecnologías Utilizadas
-
-- **Lenguaje**: C# .NET 8.0
-- **Backend**: ASP.NET Core Web API
-- **Frontend**: Blazor WebAssembly
-- **ORM**: Entity Framework Core 8.0
-- **Base de Datos**: SQL Server
-- **Cliente HTTP**: Refit
-- **Trabajos Programados**: Hangfire
-- **Logging**: Serilog
-- **Resilencia**: Polly
-- **API Cliente**: Cliente HTTP fuertemente tipado
-
-## 📚 Estructura de Carpetas
-
-```
-webFormula1/
-├── src/
-│   ├── WebFormula1.Core/
-│   │   └── Models/
-│   ├── WebFormula1.Infrastructure/
-│   │   ├── Api/
-│   │   ├── Data/
-│   │   └── Services/
-│   ├── WebFormula1.Api/
-│   │   ├── Controllers/
-│   │   └── appsettings.json
-│   └── WebFormula1.Blazor/
-│       ├── Pages/
-│       ├── Components/
-│       └── Services/
-├── tests/
-├── WebFormula1.sln
-└── README.md
-```
-
-## 🐛 Troubleshooting
-
-### Problema: "Database already exists or error creating database"
-
-**Solución**: Eliminar la base de datos anterior y ejecutar las migraciones nuevamente:
-```bash
-dotnet ef database drop -f
-dotnet ef database update
-```
-
-### Problema: "Connection timeout"
-
-**Solución**: Verificar que SQL Server está ejecutándose y la cadena de conexión es correcta en `appsettings.json`
-
-### Problema: "API key invalid"
-
-**Solución**: Verificar que la URL base de Jolpica F1 API es correcta y que la API está disponible
-
-## 📞 Soporte
-
-Para reportar problemas o sugerencias, contactar al equipo de desarrollo.
-
-## 📄 Licencia
-
-Este proyecto es de código abierto bajo licencia MIT.
-
----
-
-**Versión**: 1.0.0  
-**Última actualización**: 2026-10-03  
-**Desarrollador**: Equipo de Desarrollo
+Datos de [Jolpica F1](https://github.com/jolpica/jolpica-f1) y [Wikipedia](https://www.wikipedia.org/).
